@@ -118,11 +118,12 @@ def project_dir(tmp_path: Path) -> Path:
 
 def test_install_frame_creates_nested_directories(project_dir: Path) -> None:
     result = _run_install(["frame"], cwd=project_dir)
+    target_root = project_dir.parent
 
     assert result.returncode == 0, result.stderr
-    assert (project_dir / "alpha").is_dir()
-    assert (project_dir / "beta").is_dir()
-    assert (project_dir / "beta" / "delta").is_dir()
+    assert (target_root / "alpha").is_dir()
+    assert (target_root / "beta").is_dir()
+    assert (target_root / "beta" / "delta").is_dir()
 
 
 def test_install_frame_second_run_is_non_fatal(project_dir: Path) -> None:
@@ -136,24 +137,26 @@ def test_install_frame_second_run_is_non_fatal(project_dir: Path) -> None:
 def test_install_datagroup_copies_files_to_tagged_directories(project_dir: Path) -> None:
     frame_result = _run_install(["frame"], cwd=project_dir)
     install_result = _run_install(["datagroup", "exampleGroup3"], cwd=project_dir)
+    target_root = project_dir.parent
 
     assert frame_result.returncode == 0, frame_result.stderr
     assert install_result.returncode == 0, install_result.stderr
-    assert (project_dir / "alpha" / "file31.md").read_text(encoding="utf-8") == "group3-a"
-    assert (project_dir / "beta" / "file32.md").read_text(encoding="utf-8") == "group3-b"
-    assert (project_dir / "beta" / "delta" / "file33.md").read_text(encoding="utf-8") == "group3-c"
+    assert (target_root / "alpha" / "file31.md").read_text(encoding="utf-8") == "group3-a"
+    assert (target_root / "beta" / "file32.md").read_text(encoding="utf-8") == "group3-b"
+    assert (target_root / "beta" / "delta" / "file33.md").read_text(encoding="utf-8") == "group3-c"
 
 
 def test_uninstall_datagroup_removes_installed_files(project_dir: Path) -> None:
     assert _run_install(["frame"], cwd=project_dir).returncode == 0
     assert _run_install(["datagroup", "exampleGroup3"], cwd=project_dir).returncode == 0
+    target_root = project_dir.parent
 
     result = _run_install(["datagroup", "--uninstall", "exampleGroup3"], cwd=project_dir)
 
     assert result.returncode == 0, result.stderr
-    assert not (project_dir / "alpha" / "file31.md").exists()
-    assert not (project_dir / "beta" / "file32.md").exists()
-    assert not (project_dir / "beta" / "delta" / "file33.md").exists()
+    assert not (target_root / "alpha" / "file31.md").exists()
+    assert not (target_root / "beta" / "file32.md").exists()
+    assert not (target_root / "beta" / "delta" / "file33.md").exists()
 
 
 def test_install_datagroup_rejects_unknown_group(project_dir: Path) -> None:
@@ -204,14 +207,13 @@ def test_install_datagroup_enforces_mutual_exclusivity(project_dir: Path) -> Non
 def test_uninstall_frame_skips_non_empty_directories(project_dir: Path) -> None:
     assert _run_install(["frame"], cwd=project_dir).returncode == 0
     assert _run_install(["datagroup", "exampleGroup1"], cwd=project_dir).returncode == 0
+    target_root = project_dir.parent
 
     result = _run_install(["frame", "--uninstall"], cwd=project_dir)
 
-    assert (project_dir / "alpha").exists()
-    assert (project_dir / "beta").exists()
-
-    # The spec states non-empty directories should not be removed.
-    assert result.returncode in {0, 1}
+    assert result.returncode != 0
+    assert (target_root / "alpha").exists()
+    assert (target_root / "beta").exists()
 
 
 def test_write_policy_copy_creates_tmp_file(project_dir: Path) -> None:
@@ -236,14 +238,15 @@ def test_write_policy_copy_creates_tmp_file(project_dir: Path) -> None:
     _write_json(project_dir / "frameData.config.json", frame_data)
 
     assert _run_install(["frame"], cwd=project_dir).returncode == 0
+    target_root = project_dir.parent
 
-    destination = project_dir / "alpha" / "copy-me.md"
+    destination = target_root / "alpha" / "copy-me.md"
     destination.write_text("existing", encoding="utf-8")
 
     result = _run_install(["datagroup", "copyGroup"], cwd=project_dir)
 
     assert result.returncode == 0, result.stderr
-    tmp_candidates = sorted((project_dir / "alpha").glob("copy-me*.tmp"))
+    tmp_candidates = sorted((target_root / "alpha").glob("copy-me*.tmp"))
     assert tmp_candidates, "Expected at least one .tmp copy file to be created"
 
 
@@ -269,8 +272,9 @@ def test_write_policy_skip_does_not_overwrite_existing_file(project_dir: Path) -
     _write_json(project_dir / "frameData.config.json", frame_data)
 
     assert _run_install(["frame"], cwd=project_dir).returncode == 0
+    target_root = project_dir.parent
 
-    destination = project_dir / "alpha" / "skip-me.md"
+    destination = target_root / "alpha" / "skip-me.md"
     destination.write_text("existing", encoding="utf-8")
 
     result = _run_install(["datagroup", "skipGroup"], cwd=project_dir)
