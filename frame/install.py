@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """Install and uninstall frame directories and datagroups.
 
 This script implements the behavior described in frame.spec.md.
@@ -18,6 +20,7 @@ Kind = Literal["location", "file"]
 WritePolicy = Literal["force", "copy", "skip"]
 
 FRAME_CONFIG_NAME = "frameData.config.json"
+ALL_DATA_GROUP_NAME = "all"
 RESERVED_FILE_CHARS = set('<>:"|?*')
 RESERVED_WINDOWS_NAMES = {
     "CON",
@@ -713,6 +716,57 @@ def uninstallDataGroup(
             fail(f"Failed removing file {destinationPath}: {error}")
 
 
+def resolveRequestedDataGroups(
+    frameData: FrameData,
+    requestedDataGroupName: str,
+) -> list[str]:
+    """Resolve one or many datagroup names from CLI input."""
+    if requestedDataGroupName == ALL_DATA_GROUP_NAME:
+        resolvedDataGroups: list[str] = []
+        for dataGroupName in frameData["dataGroupList"]:
+            resolvedDataGroups.append(dataGroupName)
+        return resolvedDataGroups
+
+    ensureSupportedDataGroup(frameData, requestedDataGroupName)
+    return [requestedDataGroupName]
+
+
+def installRequestedDataGroups(
+    frameData: FrameData,
+    pathContext: PathContext,
+    requestedDataGroupName: str,
+) -> None:
+    """Install one or all datagroups based on the CLI request."""
+    if requestedDataGroupName != ALL_DATA_GROUP_NAME:
+        installDataGroup(frameData, pathContext, requestedDataGroupName)
+        return
+
+    orderedDataGroups = resolveRequestedDataGroups(frameData, requestedDataGroupName)
+    for dataGroupName in orderedDataGroups:
+        try:
+            installDataGroup(frameData, pathContext, dataGroupName)
+        except SystemExit:
+            fail(f"Failed installing DataGroup '{dataGroupName}'")
+
+
+def uninstallRequestedDataGroups(
+    frameData: FrameData,
+    pathContext: PathContext,
+    requestedDataGroupName: str,
+) -> None:
+    """Uninstall one or all datagroups based on the CLI request."""
+    if requestedDataGroupName != ALL_DATA_GROUP_NAME:
+        uninstallDataGroup(frameData, pathContext, requestedDataGroupName)
+        return
+
+    orderedDataGroups = resolveRequestedDataGroups(frameData, requestedDataGroupName)
+    for dataGroupName in orderedDataGroups:
+        try:
+            uninstallDataGroup(frameData, pathContext, dataGroupName)
+        except SystemExit:
+            fail(f"Failed uninstalling DataGroup '{dataGroupName}'")
+
+
 def parseArgs() -> argparse.Namespace:
     """Parse CLI arguments for frame and datagroup operations."""
     parser = argparse.ArgumentParser(
@@ -736,7 +790,10 @@ def parseArgs() -> argparse.Namespace:
         action="store_true",
         help="Uninstall datagroup files",
     )
-    dataGroupParser.add_argument("dataGroupName", help="DataGroup name")
+    dataGroupParser.add_argument(
+        "dataGroupName",
+        help="DataGroup name or 'all'",
+    )
 
     return parser.parse_args()
 
@@ -758,9 +815,9 @@ def main() -> None:
     if args.command == "datagroup":
         dataGroupName = cast(str, args.dataGroupName)
         if args.uninstall:
-            uninstallDataGroup(frameData, pathContext, dataGroupName)
+            uninstallRequestedDataGroups(frameData, pathContext, dataGroupName)
         else:
-            installDataGroup(frameData, pathContext, dataGroupName)
+            installRequestedDataGroups(frameData, pathContext, dataGroupName)
         return
 
     fail(f"Unsupported command: {args.command}")

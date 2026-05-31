@@ -8,7 +8,7 @@
     - This project repo will be referred to as ***Project***.
     - The parent repo will be referred to as ***Parent***
 - This ***Project*** will be added as a git submodule to the ***Parent***.
-- The Python script for this repo is `install.py`, with command options defined in this document.
+- This repo provides an `install` command, with command options defined in this document.
 
 Notes:
 - For the example Python class structures, I have not included the @staticmethod validation helpers.
@@ -35,7 +35,9 @@ Notes:
     - The users should first install the Framework.
     - The user can then install DataGroups one at a time or over time as needed.
     - Multiple DataGroups can be installed at the same time.
+    - The user can install all DataGroups in one command using `install datagroup all`.
     - The user can also uninstall DataGroups as needed.
+    - The user can uninstall all DataGroups in one command using `install datagroup --uninstall all`.
     - If the user wants to uninstall the Framework, the user must uninstall all of the DataGroups.
 - File Structure Example and Default setup.
     - This repo should contain the following default information.
@@ -383,12 +385,12 @@ class FrameData(TypedDict):
 #### Install Frame
 Installs the directory structure as specified by `frameData.config.json`.
 ```bash 
-python install.py frame
+install frame
 ```
 #### Install DataGroup
 Installs the files in the dataGroup into the directory structure.
 ```bash
-python install.py datagroup <dataGroup>
+install datagroup <dataGroup|all>
 ```
 ### Uninstall
 ----------------------------------------------------------------------------------------------------
@@ -397,13 +399,13 @@ python install.py datagroup <dataGroup>
 
 Uninstall the files in the dataGroup from the directory structure.
 ```bash
-python install.py datagroup --uninstall <dataGroup>
+install datagroup --uninstall <dataGroup|all>
 ```
 
 #### Uninstall Frame
 Uninstall the directory structure as specified by `frameData.config.json`
 ```bash
-python install.py frame --uninstall
+install frame --uninstall
 ```
 ## Behaviors
 ----------------------------------------------------------------------------------------------------
@@ -479,6 +481,8 @@ This behavior is initiated by [CLI Install DataGroup](#install-datagroup)
 *Step*: Validate requested DataGroup
 - If `<dataGroup>` is not listed in `dataGroupList`, the script must exit with non-zero status and print a clear error message identifying the unsupported dataGroup.
 - If another DataGroup is already installed, the script must continue and install the requested DataGroup alongside it, provided the target file paths do not conflict.
+- If `all` is provided, the script must install each dataGroup listed in `dataGroupList` in list order.
+- If `all` is provided and one dataGroup fails to install, the script must exit with non-zero status and print a clear error message identifying the failing dataGroup.
 
 *Step*: Determine the destination as specified in [Core Concept](#the-core-concept)
 - If a file's Tag cannot be resolved to exactly one destination directory in FrameData, the script must exit with non-zero status and print a clear error message identifying the file and Tag.
@@ -506,6 +510,8 @@ This behavior is initiated by [CLI Uninstall DataGroup](#uninstall-datagroup)
 *Step*: Validate requested DataGroup
 - If `<dataGroup>` is not listed in `dataGroupList`, the script must exit with non-zero status and print a clear error message identifying the unsupported dataGroup.
 - If the requested DataGroup is not currently installed, the script must warn the user and make no filesystem changes.
+- If `all` is provided, the script must attempt uninstall for each dataGroup listed in `dataGroupList` in list order.
+- If `all` is provided and one dataGroup fails to uninstall because of an error condition, the script must exit with non-zero status and print a clear error message identifying the failing dataGroup.
 
 *Step*: Determine the location of the files to be removed as specified in [Core Concept](#the-core-concept)
 - If a file's Tag cannot be resolved to exactly one destination directory in FrameData, the script must exit with non-zero status and print a clear error message identifying the file and Tag.
