@@ -216,6 +216,61 @@ def test_install_datagroups_can_coexist(project_dir: Path) -> None:
     assert (target_root / "beta" / "file23.md").exists()
 
 
+def test_install_datagroup_all_installs_every_group(project_dir: Path) -> None:
+    assert _run_install(["frame"], cwd=project_dir).returncode == 0
+
+    result = _run_install(["datagroup", "all"], cwd=project_dir)
+
+    assert result.returncode == 0, result.stderr
+    target_root = project_dir.parent
+    assert (target_root / "alpha" / "file11.md").exists()
+    assert (target_root / "alpha" / "file12.md").exists()
+    assert (target_root / "alpha" / "file13.md").exists()
+    assert (target_root / "beta" / "file21.md").exists()
+    assert (target_root / "beta" / "file22.md").exists()
+    assert (target_root / "beta" / "file23.md").exists()
+    assert (target_root / "alpha" / "file31.md").exists()
+    assert (target_root / "beta" / "file32.md").exists()
+    assert (target_root / "beta" / "delta" / "file33.md").exists()
+
+
+def test_uninstall_datagroup_all_removes_all_groups(project_dir: Path) -> None:
+    assert _run_install(["frame"], cwd=project_dir).returncode == 0
+    assert _run_install(["datagroup", "all"], cwd=project_dir).returncode == 0
+
+    result = _run_install(["datagroup", "--uninstall", "all"], cwd=project_dir)
+
+    assert result.returncode == 0, result.stderr
+    target_root = project_dir.parent
+    assert not (target_root / "alpha" / "file11.md").exists()
+    assert not (target_root / "alpha" / "file12.md").exists()
+    assert not (target_root / "alpha" / "file13.md").exists()
+    assert not (target_root / "beta" / "file21.md").exists()
+    assert not (target_root / "beta" / "file22.md").exists()
+    assert not (target_root / "beta" / "file23.md").exists()
+    assert not (target_root / "alpha" / "file31.md").exists()
+    assert not (target_root / "beta" / "file32.md").exists()
+    assert not (target_root / "beta" / "delta" / "file33.md").exists()
+
+
+def test_install_datagroup_all_fails_fast_on_invalid_group(project_dir: Path) -> None:
+    assert _run_install(["frame"], cwd=project_dir).returncode == 0
+
+    # Break exampleGroup2 so install all fails after exampleGroup1 and before exampleGroup3.
+    (project_dir / "exampleGroup2" / "file22.md").unlink()
+
+    result = _run_install(["datagroup", "all"], cwd=project_dir)
+
+    assert result.returncode != 0
+    target_root = project_dir.parent
+    assert (target_root / "alpha" / "file11.md").exists()
+    assert (target_root / "alpha" / "file12.md").exists()
+    assert (target_root / "alpha" / "file13.md").exists()
+    assert not (target_root / "alpha" / "file31.md").exists()
+    assert not (target_root / "beta" / "file32.md").exists()
+    assert not (target_root / "beta" / "delta" / "file33.md").exists()
+
+
 def test_uninstall_frame_skips_non_empty_directories(project_dir: Path) -> None:
     assert _run_install(["frame"], cwd=project_dir).returncode == 0
     assert _run_install(["datagroup", "exampleGroup1"], cwd=project_dir).returncode == 0
