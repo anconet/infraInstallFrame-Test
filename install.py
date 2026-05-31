@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """Install and uninstall frame directories and datagroups.
 
 This script implements the behavior described in frame.spec.md.

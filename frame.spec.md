@@ -8,7 +8,7 @@
     - This project repo will be referred to as ***Project***.
     - The parent repo will be referred to as ***Parent***
 - This ***Project*** will be added as a git submodule to the ***Parent***.
-- The Python script for this repo is `install.py`, with command options defined in this document.
+- This repo provides an `install` command, with command options defined in this document.
 
 Notes:
 - For the example Python class structures, I have not included the @staticmethod validation helpers.
@@ -383,12 +383,12 @@ class FrameData(TypedDict):
 #### Install Frame
 Installs the directory structure as specified by `frameData.config.json`.
 ```bash 
-python install.py frame
+install frame
 ```
 #### Install DataGroup
 Installs the files in the dataGroup into the directory structure.
 ```bash
-python install.py datagroup <dataGroup>
+install datagroup <dataGroup>
 ```
 ### Uninstall
 ----------------------------------------------------------------------------------------------------
@@ -397,13 +397,13 @@ python install.py datagroup <dataGroup>
 
 Uninstall the files in the dataGroup from the directory structure.
 ```bash
-python install.py datagroup --uninstall <dataGroup>
+install datagroup --uninstall <dataGroup>
 ```
 
 #### Uninstall Frame
 Uninstall the directory structure as specified by `frameData.config.json`
 ```bash
-python install.py frame --uninstall
+install frame --uninstall
 ```
 ## Behaviors
 ----------------------------------------------------------------------------------------------------
