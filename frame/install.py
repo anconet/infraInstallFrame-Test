@@ -18,7 +18,6 @@ Kind = Literal["location", "file"]
 WritePolicy = Literal["force", "copy", "skip"]
 
 FRAME_CONFIG_NAME = "frameData.config.json"
-STATE_FILE_NAME = ".install.state.json"
 RESERVED_FILE_CHARS = set('<>:"|?*')
 RESERVED_WINDOWS_NAMES = {
     "CON",
@@ -271,27 +270,10 @@ class FrameData(TypedDict):
         return cast(FrameData, obj)
 
 
-class InstallState(TypedDict):
-    """Persistent state for mutually exclusive datagroup installation."""
-
-    installedDataGroup: str | None
-
-    @staticmethod
-    def validate(obj: dict[str, Any]) -> InstallState:
-        """Validate persistent installer state file shape."""
-        if "installedDataGroup" not in obj:
-            raise ValueError("Invalid state file: missing key 'installedDataGroup'")
-        value = obj["installedDataGroup"]
-        if value is not None and not isinstance(value, str):
-            raise ValueError("Invalid state file: 'installedDataGroup' must be string or null")
-        return cast(InstallState, obj)
-
-
 class PathContext(TypedDict):
     """Resolved paths for Project repo and Parent target roots."""
 
     projectRoot: Path
-    parentRoot: Path
     targetRoot: Path
 
 
@@ -332,8 +314,8 @@ def writeJsonFile(filePath: Path, payload: dict[str, Any]) -> None:
         fail(f"Unable to write {filePath}: {error}")
 
 
-def resolveTargetRoot(projectRoot: Path, frameData: FrameData) -> tuple[Path, Path]:
-    """Resolve and validate Parent root and install target root."""
+def resolveTargetRoot(projectRoot: Path, frameData: FrameData) -> Path:
+    """Resolve and validate the install target root in the Parent repo."""
     projectDirectory = frameData["projectDirectory"]
     projectDirectoryPath = Path(projectDirectory)
 
@@ -344,14 +326,13 @@ def resolveTargetRoot(projectRoot: Path, frameData: FrameData) -> tuple[Path, Pa
         if pathPart == "..":
             fail("FrameData projectDirectory must not contain path traversal '..'")
 
-    parentRoot = projectRoot.parent
-    resolvedTargetRoot = parentRoot.joinpath(projectDirectoryPath)
+    resolvedTargetRoot = projectRoot.parent.joinpath(projectDirectoryPath)
     if not resolvedTargetRoot.exists():
         fail(
             f"Resolved projectDirectory does not exist: {resolvedTargetRoot}"
         )
 
-    return parentRoot, resolvedTargetRoot
+    return resolvedTargetRoot
 
 
 def flattenDirectories(
@@ -456,10 +437,7 @@ def loadAndValidateFrameData(projectRoot: Path) -> tuple[FrameData, PathContext]
 
     validateTagUniqueness(frameData)
 
-    parentRoot, targetRoot = resolveTargetRoot(projectRoot, frameData)
-
-    if len(frameData["dataGroupList"]) == 0:
-        fail("Invalid FrameData: dataGroupList must contain at least one dataGroup")
+    targetRoot = resolveTargetRoot(projectRoot, frameData)
 
     for dataGroupName in frameData["dataGroupList"]:
         groupDirectory = projectRoot.joinpath(dataGroupName)
@@ -477,7 +455,6 @@ def loadAndValidateFrameData(projectRoot: Path) -> tuple[FrameData, PathContext]
 
     pathContext: PathContext = PathContext(
         projectRoot=projectRoot,
-        parentRoot=parentRoot,
         targetRoot=targetRoot,
     )
     return frameData, pathContext
@@ -516,31 +493,6 @@ def resolveDestinationDirectory(
             f"'{fileEntry['name']}', tag={tagObj}"
         )
     return destinationList[0]
-
-
-def getStateFilePath(targetRoot: Path) -> Path:
-    """Return path to persistent state file."""
-    return targetRoot.joinpath(STATE_FILE_NAME)
-
-
-def loadInstallState(targetRoot: Path) -> InstallState:
-    """Load install state, defaulting to no installed datagroup."""
-    statePath = getStateFilePath(targetRoot)
-    if not statePath.exists():
-        return InstallState(installedDataGroup=None)
-
-    rawStateObj = loadJsonFile(statePath)
-    try:
-        state = InstallState.validate(rawStateObj)
-    except ValueError as error:
-        fail(str(error))
-    return state
-
-
-def saveInstallState(targetRoot: Path, state: InstallState) -> None:
-    """Persist install state to disk."""
-    statePath = getStateFilePath(targetRoot)
-    writeJsonFile(statePath, cast(dict[str, Any], state))
 
 
 def installFrame(frameData: FrameData, targetRoot: Path) -> None:
@@ -598,12 +550,6 @@ def uninstallFrame(frameData: FrameData, pathContext: PathContext) -> None:
     """Attempt to remove frame directories, leaving non-empty directories intact."""
     projectRoot = pathContext["projectRoot"]
     targetRoot = pathContext["targetRoot"]
-
-    state = loadInstallState(targetRoot)
-    if state["installedDataGroup"] is not None:
-        fail(
-            "A DataGroup is still marked as installed. Uninstall DataGroups first."
-        )
 
     detectedInstalled = detectInstalledDataGroups(frameData, projectRoot, targetRoot)
     if len(detectedInstalled) > 0:
@@ -700,14 +646,6 @@ def installDataGroup(frameData: FrameData, pathContext: PathContext, dataGroupNa
 
     ensureSupportedDataGroup(frameData, dataGroupName)
 
-    state = loadInstallState(targetRoot)
-    installedDataGroup = state["installedDataGroup"]
-    if installedDataGroup is not None and installedDataGroup != dataGroupName:
-        fail(
-            "DataGroups are mutually exclusive. Already installed: "
-            f"{installedDataGroup}"
-        )
-
     dataGroup, groupDirectory = loadAndValidateDataGroup(projectRoot, dataGroupName)
     tagDestinationMap = buildTagDestinationMap(targetRoot, frameData)
 
@@ -723,8 +661,6 @@ def installDataGroup(frameData: FrameData, pathContext: PathContext, dataGroupNa
         destinationPath = destinationDirectory.joinpath(fileEntry["name"])
         applyWritePolicy(sourcePath, destinationPath, fileEntry["writePolicy"])
 
-    saveInstallState(targetRoot, InstallState(installedDataGroup=dataGroupName))
-
 
 def uninstallDataGroup(
     frameData: FrameData,
@@ -737,16 +673,22 @@ def uninstallDataGroup(
 
     ensureSupportedDataGroup(frameData, dataGroupName)
 
-    state = loadInstallState(targetRoot)
-    installedDataGroup = state["installedDataGroup"]
-    if installedDataGroup != dataGroupName:
+    dataGroup, _groupDirectory = loadAndValidateDataGroup(projectRoot, dataGroupName)
+    tagDestinationMap = buildTagDestinationMap(targetRoot, frameData)
+
+    isInstalled = False
+    for fileEntry in dataGroup["fileList"]:
+        destinationDirectory = resolveDestinationDirectory(fileEntry, tagDestinationMap)
+        destinationPath = destinationDirectory.joinpath(fileEntry["name"])
+        if destinationPath.exists():
+            isInstalled = True
+            break
+
+    if not isInstalled:
         warn(
             "Requested DataGroup is not currently installed; no filesystem changes made"
         )
         return
-
-    dataGroup, _groupDirectory = loadAndValidateDataGroup(projectRoot, dataGroupName)
-    tagDestinationMap = buildTagDestinationMap(targetRoot, frameData)
 
     for fileEntry in dataGroup["fileList"]:
         destinationDirectory = resolveDestinationDirectory(fileEntry, tagDestinationMap)
@@ -769,8 +711,6 @@ def uninstallDataGroup(
             fail(f"Permission denied removing file: {destinationPath}")
         except OSError as error:
             fail(f"Failed removing file {destinationPath}: {error}")
-
-    saveInstallState(targetRoot, InstallState(installedDataGroup=None))
 
 
 def parseArgs() -> argparse.Namespace:
