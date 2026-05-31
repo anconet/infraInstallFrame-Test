@@ -146,8 +146,9 @@ def test_install_datagroup_copies_files_to_tagged_directories(project_dir: Path)
     assert (target_root / "beta" / "delta" / "file33.md").read_text(encoding="utf-8") == "group3-c"
 
 
-def test_uninstall_datagroup_removes_installed_files(project_dir: Path) -> None:
+def test_uninstall_datagroup_removes_only_that_datagroup(project_dir: Path) -> None:
     assert _run_install(["frame"], cwd=project_dir).returncode == 0
+    assert _run_install(["datagroup", "exampleGroup1"], cwd=project_dir).returncode == 0
     assert _run_install(["datagroup", "exampleGroup3"], cwd=project_dir).returncode == 0
     target_root = project_dir.parent
 
@@ -157,6 +158,9 @@ def test_uninstall_datagroup_removes_installed_files(project_dir: Path) -> None:
     assert not (target_root / "alpha" / "file31.md").exists()
     assert not (target_root / "beta" / "file32.md").exists()
     assert not (target_root / "beta" / "delta" / "file33.md").exists()
+    assert (target_root / "alpha" / "file11.md").exists()
+    assert (target_root / "alpha" / "file12.md").exists()
+    assert (target_root / "alpha" / "file13.md").exists()
 
 
 def test_install_datagroup_rejects_unknown_group(project_dir: Path) -> None:
@@ -194,14 +198,22 @@ def test_install_datagroup_fails_when_tag_is_unresolved(project_dir: Path) -> No
     assert result.returncode != 0
 
 
-def test_install_datagroup_enforces_mutual_exclusivity(project_dir: Path) -> None:
+def test_install_datagroups_can_coexist(project_dir: Path) -> None:
     assert _run_install(["frame"], cwd=project_dir).returncode == 0
 
     first = _run_install(["datagroup", "exampleGroup1"], cwd=project_dir)
     second = _run_install(["datagroup", "exampleGroup2"], cwd=project_dir)
 
     assert first.returncode == 0, first.stderr
-    assert second.returncode != 0
+    assert second.returncode == 0, second.stderr
+
+    target_root = project_dir.parent
+    assert (target_root / "alpha" / "file11.md").exists()
+    assert (target_root / "alpha" / "file12.md").exists()
+    assert (target_root / "alpha" / "file13.md").exists()
+    assert (target_root / "beta" / "file21.md").exists()
+    assert (target_root / "beta" / "file22.md").exists()
+    assert (target_root / "beta" / "file23.md").exists()
 
 
 def test_uninstall_frame_skips_non_empty_directories(project_dir: Path) -> None:

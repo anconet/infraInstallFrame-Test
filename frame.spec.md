@@ -19,7 +19,8 @@ Notes:
     - We'll call that group of files a DataGroup.
     - We'll call the framework the Framework.
 - There are multiple DataGroups.
-    - These DataGroups are mutually exclusive.
+    - These DataGroups can coexist in the same Framework.
+    - These DataGroups should not interfere with each other unless a file rule explicitly allows it.
     - These DataGroups are installed into the Framework specified by FrameData.
     - Each DataGroup has a <dataGroup>.dataGroup.json file that contains information about the DataGroup.
     - That information can be found in [Data Group Config File Definitions](#data-group-config-file-definitions)
@@ -32,8 +33,8 @@ Notes:
     - The Framework creation and Tag resolution are specified by the user in [Frame Data Config File Definition](#frame-data-config-file-definition)
 - How it's used
     - The users should first install the Framework.
-    - The user can then install DataGroups one at a time.
-    - The installation of the DataGroups are mutually exclusive.
+    - The user can then install DataGroups one at a time or over time as needed.
+    - Multiple DataGroups can be installed at the same time.
     - The user can also uninstall DataGroups as needed.
     - If the user wants to uninstall the Framework, the user must uninstall all of the DataGroups.
 - File Structure Example and Default setup.
@@ -477,7 +478,7 @@ This behavior is initiated by [CLI Install DataGroup](#install-datagroup)
 
 *Step*: Validate requested DataGroup
 - If `<dataGroup>` is not listed in `dataGroupList`, the script must exit with non-zero status and print a clear error message identifying the unsupported dataGroup.
-- If another DataGroup is already installed, the script must exit with non-zero status and print a clear error message because DataGroups are mutually exclusive.
+- If another DataGroup is already installed, the script must continue and install the requested DataGroup alongside it, provided the target file paths do not conflict.
 
 *Step*: Determine the destination as specified in [Core Concept](#the-core-concept)
 - If a file's Tag cannot be resolved to exactly one destination directory in FrameData, the script must exit with non-zero status and print a clear error message identifying the file and Tag.
