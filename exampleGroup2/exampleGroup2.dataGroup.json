@@ -1,0 +1,28 @@
+{
+  "fileList": [
+    {
+      "name": "file21.md",
+      "tag": {
+        "kind": "location",
+        "name": "B"
+      },
+      "writePolicy": "force"
+    },
+    {
+      "name": "file22.md",
+      "tag": {
+        "kind": "location",
+        "name": "B"
+      },
+      "writePolicy": "force"
+    },
+    {
+      "name": "file23.md",
+      "tag": {
+        "kind": "location",
+        "name": "B"
+      },
+      "writePolicy": "force"
+    }
+  ]
+}
