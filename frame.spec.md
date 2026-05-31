@@ -4,37 +4,37 @@
 ## Project Overview
 ----------------------------------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------------
-- This project is a repo for generic installing of files into a Parent repo.
+- This project is a repo for installing files into a Parent repo in a generic way.
     - This project repo will be referred to as ***Project***.
     - The parent repo will be referred to as ***Parent***
 - This ***Project*** will be added as a git submodule to the ***Parent***.
-- The python script for this repo is install.py with command options give in this document.
+- The Python script for this repo is `install.py`, with command options defined in this document.
 
 Notes:
 - For the example Python class structures, I have not included the @staticmethod validation helpers.
     - The helpers must be added by the coding agent.
 
 ### The Core Concept
-- We need to install an arbitary group of files into an arbitrary framework.
+- We need to install an arbitrary group of files into an arbitrary framework.
     - We'll call that group of files a DataGroup.
-    - We'll call the frame work the Framework.
+    - We'll call the framework the Framework.
 - There are multiple DataGroups.
     - These DataGroups are mutually exclusive.
-    - These DataGroups are installled into the Framework specifed by FrameData.
+    - These DataGroups are installed into the Framework specified by FrameData.
     - Each DataGroup has a <dataGroup>.dataGroup.json file that contains information about the DataGroup.
-    - That information can be found in [Data Group Config File Defintions](#data-group-config-file-definitions)
+    - That information can be found in [Data Group Config File Definitions](#data-group-config-file-definitions)
     - Each file in the DataGroup is associated with a Tag.
         - This Tag matches to a Tag in the Framework.
     - The files will be installed into the directory with the matching Tag.
     - Note, multiple files can resolve to the same Tag.
         - Therefore multiple files can be copied to the same directory.
 - There is one Framework.
-    - The Framework creation and Tag resolution is specified by the user in [Frame Data Config File](#frame-data-config-file-definion.)
+    - The Framework creation and Tag resolution are specified by the user in [Frame Data Config File Definition](#frame-data-config-file-definition)
 - How it's used
     - The users should first install the Framework.
     - The user can then install DataGroups one at a time.
     - The installation of the DataGroups are mutually exclusive.
-    - The user can also unintal DataGroups as needed.
+    - The user can also uninstall DataGroups as needed.
     - If the user wants to uninstall the Framework, the user must uninstall all of the DataGroups.
 - File Structure Example and Default setup.
     - This repo should contain the following default information.
@@ -66,25 +66,22 @@ Notes:
 {
     "projectDirectory":"",
     "tagList":[],
-    "directoryList":[        
-        {"name":"sampleDirectory1", "tagList":[{{"kind":"location","name":"A"}}], "directoryList":[]},
-        {"name":"sampleDirectory2", "tagList":[{{"kind":"location","name":"B"}}], "directoryList":[
-            {"name":"sampleDirectory4", "tagList":[{{"kind":"location","name":"D"}}], "directoryList":[]}
-        ]}],
-    "dataGroupList":[
-        {"name":"exampleGroup1"},
-        {"name":"exampleGroup2"},
-        {"name":"exampleGroup3"}.
-        {"name":"exampleGroup4"}]
+    "directoryList":[
+        {"name":"sampleDirectory1", "tagList":[{"kind":"location","name":"A"}], "directoryList":[]},
+        {"name":"sampleDirectory2", "tagList":[{"kind":"location","name":"B"}], "directoryList":[
+            {"name":"sampleDirectory4", "tagList":[{"kind":"location","name":"D"}], "directoryList":[]}
+        ]}
+    ],
+    "dataGroupList":["exampleGroup1", "exampleGroup2", "exampleGroup3", "exampleGroup4"]
 }
 ```
-exampleGroup1/exampleGroupl.dataGroup.json
+exampleGroup1/exampleGroup1.dataGroup.json
 ```json
 {
     "fileList":[
         {"name":"file11.md","tag":{"kind":"location","name":"A"}, "writePolicy":"force"},
         {"name":"file12.md","tag":{"kind":"location","name":"A"}, "writePolicy":"force"},
-        {"name":"file13.md","tag":{"kind":"location","name":"A"}, "writePolicy":"force"},
+        {"name":"file13.md","tag":{"kind":"location","name":"A"}, "writePolicy":"force"}
     ]
 }
 ```
@@ -94,7 +91,7 @@ exampleGroup2/exampleGroup2.dataGroup.json
     "fileList":[
         {"name":"file21.md","tag":{"kind":"location","name":"B"}, "writePolicy":"force"},
         {"name":"file22.md","tag":{"kind":"location","name":"B"}, "writePolicy":"force"},
-        {"name":"file23.md","tag":{"kind":"location","name":"B"}, "writePolicy":"force"},
+        {"name":"file23.md","tag":{"kind":"location","name":"B"}, "writePolicy":"force"}
     ]
 }
 ```
@@ -104,7 +101,7 @@ exampleGroup3/exampleGroup3.dataGroup.json
     "fileList":[
         {"name":"file31.md","tag":{"kind":"location","name":"A"}, "writePolicy":"force"},
         {"name":"file32.md","tag":{"kind":"location","name":"B"}, "writePolicy":"force"},
-        {"name":"file33.md","tag":{"kind":"location","name":"D"}, "writePolicy":"force"},
+        {"name":"file33.md","tag":{"kind":"location","name":"D"}, "writePolicy":"force"}
     ]
 }
 ```
@@ -114,7 +111,7 @@ exampleGroup4/exampleGroup4.dataGroup.json
     "fileList":[
         {"name":"file41.md","tag":{"kind":"location","name":"D"}, "writePolicy":"force"},
         {"name":"file42.md","tag":{"kind":"location","name":"D"}, "writePolicy":"force"},
-        {"name":"file43.md","tag":{"kind":"location","name":"D"}, "writePolicy":"force"},
+        {"name":"file43.md","tag":{"kind":"location","name":"D"}, "writePolicy":"force"}
     ]
 }
 ```
@@ -139,9 +136,14 @@ exampleGroup4/exampleGroup4.dataGroup.json
     - The file must contain valid JSON. 
     - The JSON must not be malformed.
     - The config must contain all required top-level keys: fileList.
+    - If a requested `<dataGroup>` directory does not exist, report the missing directory in the error message.
+    - If `/<dataGroup>/<dataGroup>.dataGroup.json` does not exist for a discovered or requested dataGroup, report the missing config file in the error message.
+    - If `fileList` exists but is not an array, report that type mismatch in the error message.
+    - If `fileList` is an empty array, report that a DataGroup must contain at least one file in the error message.
+    - If two entries in `fileList` use the same `name`, report the duplicate file entry in the error message.
 - Follow [Error Message](#error-messages) if validation fails
 
-Example JSON:
+Example JSON fragments:
 
 ```json
 {
@@ -181,7 +183,7 @@ Kind = Literal["location","file"]
 ------------------------------
 
 ```Python
-class Tag(TypeDict):
+class Tag(TypedDict):
     kind: Kind
     name: str
 ```
@@ -194,7 +196,7 @@ class Tag(TypeDict):
     - The key must be present.
     - The value must be a non-empty string.
     - Must contain only valid identifier characters (alphanumeric and underscores).
-    - Must be unique all tag.names in the project.
+    - Must be unique across all `Tag.name` values in the project.
 - Follow [Error Message](#error-messages) if validation fails
 
 #### WritePolicy Definition
@@ -215,16 +217,16 @@ WritePolicy = Literal["force","copy","skip"]
     - The value is case-sensitive.
     - The value must be present in any File definition.
     - Verify force overwrites the destination file.
-    - Verify copy makes a copy of the sources file in the destination directory with a .tmp extention.
-    - Verify skip cause no change to the destination directory if the destination file is present.
-    - If no destination file is present, verify the source file is written to the desgination directory. 
+    - Verify `copy` makes a copy of the source file in the destination directory with a `.tmp` extension.
+    - Verify `skip` causes no change to the destination directory if the destination file is present.
+    - If no destination file is present, verify the source file is written to the destination directory.
 - Follow [Error Message](#error-messages) if validation fails
 
 #### File Class Definition
 ------------------------------
 
 ```python
-class File(TypeDict):
+class File(TypedDict):
     name:str
     tag:Tag
     writePolicy:WritePolicy
@@ -246,37 +248,42 @@ class File(TypeDict):
 - This key is the tag for the file.
 - Validation Requirements
     - This key must be present.
-    - The value must be a vaild form of the Tag class see [](#tag-class-definition)
+    - The value must be a valid form of the Tag class. See [Tag Class Definition](#tag-class-definition)
+    - The referenced Tag must exist exactly once in FrameData.
+    - If the Tag cannot be resolved in FrameData, the script must exit with non-zero status and print a clear error message identifying the file and unresolved Tag.
 - Follow [Error Message](#error-messages) if validation fails    
 
 ##### WritePolicy
 - This key is the writepolicy for the file. 
-- Validtaion Requirements
+- Validation Requirements
     - This key must be present.
-    - This value must a vaild form of the WritePolicy Literal, See [](#writepolicy-definition)
+    - This value must be a valid form of the WritePolicy Literal. See [WritePolicy Definition](#writepolicy-definition)
 - Follow [Error Message](#error-messages) if validation fails    
 
 #### DataGroup Definition
 ------------------------------
 
 ```python
-class DataGroup(TypeDict)
+class DataGroup(TypedDict):
     fileList:list[File]
 ```
-- 
+- Represents the contents of one `<dataGroup>.dataGroup.json` file.
 
-### Frame Data Config File Definion
+### Frame Data Config File Definition
 ----------------------------------------------------------------------------------------------------
 - This is a JSON file.
 - It is located in the root directory of this repo.
-- This file is called framedata.config.json
+- This file is called `frameData.config.json`.
 - The file must exist in the ***Project*** directory. 
     - If the file does not exist, the script must exit with non-zero status and print a clear error message indicating the file path that was not found.
 - The file must contain valid JSON. 
     - If the JSON is malformed, the script must exit with non-zero status and print a clear error message describing the JSON parse error.
-- The config must contain all required top-level keys: projectDirectory, tagList, and dataGroupLilst.
+- The config must contain all required top-level keys: projectDirectory, tagList, directoryList, and dataGroupList.
     - If any of these keys are missing, the script must exit with non-zero status and warn the user.
 - If any value has an incorrect type, the script must exit with non-zero status and warn the user.
+- If `directoryList` is missing, the script must exit with non-zero status and print a clear error message because it is a required top-level key.
+- If `dataGroupList` contains duplicate names, the script must exit with non-zero status and print a clear error message identifying the duplicate dataGroup entry.
+- If any dataGroup listed in `dataGroupList` does not have a matching directory and `/<dataGroup>/<dataGroup>.dataGroup.json` file in the Project, the script must exit with non-zero status and print a clear error message identifying the missing resource.
 
 Example JSON:
 
@@ -285,17 +292,16 @@ Example JSON:
     "projectDirectory":"",
     "tagList":[],
     "directoryList":[        
-        {"name":".github", "tagList":[{{"kind":"location","name":"A"}}], "directoryList":[]},
-        {"name":"agents", "tagList":[{{"kind":"location","name":"C"}}], "directoryList":[]}],
-    "dataGroupList":[
-        {"name":""},
-        {"name":""}]
+        {"name":".github", "tagList":[{"kind":"location","name":"A"}], "directoryList":[]},
+        {"name":"agents", "tagList":[{"kind":"location","name":"C"}], "directoryList":[]}
+    ],
+    "dataGroupList":["exampleGroup1", "exampleGroup2"]
 }
 ```
 #### Directory Class Definition
 ------------------------------
 ```python
-class Directory(TypeDict):
+class Directory(TypedDict):
     name:str
     tagList:list[Tag]
     directoryList: list[Directory]
@@ -315,24 +321,24 @@ class Directory(TypeDict):
 - Validation requirements
     - The value must be an array.
     - Each Tag.name must be unique in the Project as specified in [Tags](#tag-class-definition)
-    - Each Tag must match the structure specifed in [Tags](#tag-class-definition)
+    - Each Tag must match the structure specified in [Tag Class Definition](#tag-class-definition)
     - Each Tag defined in tagList should be referenced in dataGroup config files.
 - Follow [Error Message](#error-messages) if validation fails
 
-##### direcoryList Generic
+##### directoryList Generic
 - This key contains a JSON array of Directories in the current directory.
 - The value may be an empty array [].
 - Validation requirements
     - The value must be an array.
     - Each Directory must be unique in the list.
-    - Each Directory must match the structure specifed in [Directory](#directory-class-definition)
+    - Each Directory must match the structure specified in [Directory Class Definition](#directory-class-definition)
     - Tags defined in tagList should be referenced in dataGroup config files and directoryList.
 - Follow [Error Message](#error-messages) if validation fails
 
 #### FrameData Class Definition
 ------------------------------
 ```python
-class FrameData(TypeDict):
+class FrameData(TypedDict):
     projectDirectory:Path
     tagList:list[Tag]
     directoryList:list[Directory]
@@ -354,7 +360,9 @@ class FrameData(TypeDict):
 
 ##### directoryList Parent Directory
 - This contains a JSON array of Directories at the top of the ***Parent*** directory structure.
-- This directoryList should follow the same definition and validation rules as [directoryList Generic](#direcorylist-generic)
+- This directoryList should follow the same definition and validation rules as [directoryList Generic](#directorylist-generic)
+- If two resolved directory paths are the same after combining parent and child names, the script must exit with non-zero status and print a clear error message identifying the conflicting directories.
+- If a path that must be created as a directory already exists as a file, the script must exit with non-zero status and print a clear error message identifying the path conflict.
 
 ##### dataGroupList
 - This key contains a list of dataGroup names that are available for installation.
@@ -372,14 +380,14 @@ class FrameData(TypeDict):
 ----------------------------------------------------------------------------------------------------
 
 #### Install Frame
-Installs the directory stucture as specified by `frameData.config.json`.
+Installs the directory structure as specified by `frameData.config.json`.
 ```bash 
-install frame
+python install.py frame
 ```
 #### Install DataGroup
 Installs the files in the dataGroup into the directory structure.
 ```bash
-install datagroup <dataGroup>
+python install.py datagroup <dataGroup>
 ```
 ### Uninstall
 ----------------------------------------------------------------------------------------------------
@@ -388,13 +396,13 @@ install datagroup <dataGroup>
 
 Uninstall the files in the dataGroup from the directory structure.
 ```bash
-install datagroup --uninstall <dataGroup>
+python install.py datagroup --uninstall <dataGroup>
 ```
 
-#### Uninstall DataGroup
+#### Uninstall Frame
 Uninstall the directory structure as specified by `frameData.config.json`
 ```bash
-install frame --uninstall
+python install.py frame --uninstall
 ```
 ## Behaviors
 ----------------------------------------------------------------------------------------------------
@@ -403,10 +411,10 @@ install frame --uninstall
 ### Install Frame
 ----------------------------------------------------------------------------------------------------
 
-This is behavior is initiated by [CLI Install Frame](#install-frame)
+This behavior is initiated by [CLI Install Frame](#install-frame)
 
 *Step*: Read frameData.config.json.
-- Verify the file is correct per [frameData.config.json definition](#frame-data-config-file-definion)
+- Verify the file is correct per [frameData.config.json definition](#frame-data-config-file-definition)
 
 *Step*: Create Directories
 - Create directories per [directoryList](#directorylist-parent-directory)
@@ -419,19 +427,29 @@ This is behavior is initiated by [CLI Install Frame](#install-frame)
         - Exception case
         - Skip creating the directory
         - Warn the user that the directory already existed.
+    - A file exists at the target directory path
+        - Exception case
+        - Exit with non-zero status.
+        - Print a clear error message identifying the conflicting file path.
+    - The process does not have permission to create a directory
+        - Exception case
+        - Exit with non-zero status.
+        - Print a clear error message identifying the directory path that could not be created.
 
 ### Uninstall Frame
 ----------------------------------------------------------------------------------------------------
 
-This behavior is inititiated by [CLI Uninstall Frame](#uninstall-frame)
+This behavior is initiated by [CLI Uninstall Frame](#uninstall-frame)
 
 *Step*: Read frameData.config.json.
-- Verify the file is correct per [frameData.config.json definition](#frame-data-config-file-definion)
+- Verify the file is correct per [frameData.config.json definition](#frame-data-config-file-definition)
 
 *Step*: Remove Directories as specified.
 - Note, it is expected that directories should be empty.
 - If a directory is not empty, do not remove the directory.
     - Issue a warning to the user and continue on.
+- Before removing directories, verify that no DataGroup is still installed.
+    - If installed DataGroup files are still present, the script must exit with non-zero status and print a clear error message instructing the user to uninstall DataGroups first.
 - Situations that maybe encountered. 
     - Directory exists and is Empty
         - Normal case
@@ -457,34 +475,54 @@ This behavior is initiated by [CLI Install DataGroup](#install-datagroup)
 - Find that file directory as specified in [Data Group Config File](#data-group-config-file-definitions)
 - Verify the file is correct as specified in [Data Group Config File](#data-group-config-file-definitions)
 
+*Step*: Validate requested DataGroup
+- If `<dataGroup>` is not listed in `dataGroupList`, the script must exit with non-zero status and print a clear error message identifying the unsupported dataGroup.
+- If another DataGroup is already installed, the script must exit with non-zero status and print a clear error message because DataGroups are mutually exclusive.
+
 *Step*: Determine the destination as specified in [Core Concept](#the-core-concept)
+- If a file's Tag cannot be resolved to exactly one destination directory in FrameData, the script must exit with non-zero status and print a clear error message identifying the file and Tag.
+- If the resolved destination directory does not exist, the script must exit with non-zero status and print a clear error message instructing the user to install the Frame first.
 
 *Step*: Copy files to the target directories as specified by:
 - [Data Group Config File](#data-group-config-file-definitions) and 
-- [FrameData Confile Filel](#frame-data-config-file-definion)
+- [Frame Data Config File Definition](#frame-data-config-file-definition)
+- If the source file listed in the DataGroup config is missing at install time, the script must exit with non-zero status and print a clear error message identifying the missing source file.
+- If the destination path exists as a directory when a file write is required, the script must exit with non-zero status and print a clear error message identifying the conflicting path.
+- If a file copy or overwrite fails because of permissions or another OS error, the script must exit with non-zero status and print a clear error message identifying the source and destination paths involved.
 
 
-### Uninstalll DataGroup
+### Uninstall DataGroup
 ----------------------------------------------------------------------------------------------------
 
-This behavior is initiated by [CLI Uninstalll DataGroup](#uninstall-datagroup)
+This behavior is initiated by [CLI Uninstall DataGroup](#uninstall-datagroup)
 
 *Step*: Read frameData.config.json
 - Verify the file is correct. 
 
-*Step*: Read <datafroup>.dataGroup.json
+*Step*: Read <dataGroup>.dataGroup.json
 - Verify the file is correct.
 
-*Step*: Determine the location of the files to be removed as specifed in D[Core Concept](#the-core-concept)
+*Step*: Validate requested DataGroup
+- If `<dataGroup>` is not listed in `dataGroupList`, the script must exit with non-zero status and print a clear error message identifying the unsupported dataGroup.
+- If the requested DataGroup is not currently installed, the script must warn the user and make no filesystem changes.
 
-*Step*: Remove the specifed files from the Framework.
-- Situatiosn that maybe encountered
+*Step*: Determine the location of the files to be removed as specified in [Core Concept](#the-core-concept)
+- If a file's Tag cannot be resolved to exactly one destination directory in FrameData, the script must exit with non-zero status and print a clear error message identifying the file and Tag.
+
+*Step*: Remove the specified files from the Framework.
+- Situations that may be encountered
     - File is present
         - Normal case
         - Remove file
     - File is not present
         - Exception case
         - Warn the user that the file to be removed is missing.
+    - The resolved path exists as a directory instead of a file
+        - Exception case
+        - Warn the user and skip removal for that entry.
+    - The process does not have permission to remove the file
+        - Exception case
+        - Exit with non-zero status and print a clear error message identifying the file path that could not be removed.
 
 
 
