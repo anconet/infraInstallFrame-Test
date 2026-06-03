@@ -1,0 +1,3 @@
+[submodule "infraInstallFrame"]
+	path = infraInstallFrame
+	url = https://github.com/anconet/infraInstallFrame
